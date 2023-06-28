@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/kyverno/kyverno/pkg/engine/variables/regex"
-	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/api/admissionregistration/v1alpha1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
@@ -758,7 +757,26 @@ type DryRunOption struct {
 
 type IgnoreFieldList []ObjectFieldBinding
 
-type ObjectFieldBinding k8smanifest.ObjectFieldBinding
+type ObjectReference struct {
+	// Group specifies object group.
+	Group string `json:"group,omitempty"`
+	// Version specifies object version.
+	Version string `json:"version,omitempty"`
+	// Kind specifies object kind.
+	Kind string `json:"kind,omitempty"`
+	// Name specifies the obejct name.
+	Name string `json:"name,omitempty"`
+	// Name specifies the object namespace.
+	Namespace string `json:"namespace,omitempty"`
+	// APIVersion specifies resource apiVersion.
+}
+
+type ObjectReferenceList []ObjectReference
+
+type ObjectFieldBinding struct {
+	Fields  []string            `json:"fields,omitempty"`
+	Objects ObjectReferenceList `json:"objects,omitempty"`
+}
 
 // AdmissionOperation can have one of the values CREATE, UPDATE, CONNECT, DELETE, which are used to match a specific action.
 // +kubebuilder:validation:Enum=CREATE;CONNECT;UPDATE;DELETE

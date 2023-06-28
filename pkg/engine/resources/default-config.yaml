@@ -1,5 +1,13 @@
 ignoreFields:
   - fields:
+    - metadata.annotations.cosign.sigstore.dev/resourceBundleRef
+    - metadata.annotations.cosign.sigstore.dev/signature
+    - metadata.annotations.cosign.sigstore.dev/message
+    - metadata.annotations.cosign.sigstore.dev/certificate
+    - metadata.annotations.cosign.sigstore.dev/bundle
+    objects:
+    - kind: '*'
+  - fields:
     - metadata.namespace
     - spec.containers.*.imagePullPolicy
     - spec.containers.*.terminationMessagePath
@@ -44,6 +52,7 @@ ignoreFields:
     - spec.containers.*.ports.*.protocol
     - spec.containers.*.resources
     - spec.securityContext
+    - metadata.annotations.deployment.kubernetes.io/revision
     objects:
     - kind: Deployment
   - fields:
@@ -75,3 +84,12 @@ ignoreFields:
     - imagePullSecrets.*.name
     objects:
     - kind: ServiceAccount
+  - fields:
+    - metadata.annotations.deprecated.daemonset.template.generation
+    objects:
+    - kind: DaemonSet
+  - fields:
+    - spec.host
+    objects:
+    - kind: Route
+      group: route.openshift.io

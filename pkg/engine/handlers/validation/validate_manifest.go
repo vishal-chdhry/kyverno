@@ -103,15 +103,13 @@ func (h validateManifestHandler) verifyManifest(
 	}
 
 	// prepare verifyResource option
-	vo := &k8smanifest.VerifyResourceOption{}
+	vo := &kyvernov1.VerifyResourceOption{}
 	// adding default ignoreFields from
-	// github.com/sigstore/k8s-manifest-sigstore/blob/main/pkg/k8smanifest/resources/default-config.yaml
-	vo = k8smanifest.AddDefaultConfig(vo)
 	// adding default ignoreFields from pkg/engine/resources/default-config.yaml
 	vo = addDefaultConfig(vo)
 	// adding ignoreFields from Policy
 	for _, i := range verifyRule.IgnoreFields {
-		converted := k8smanifest.ObjectFieldBinding(i)
+		converted := kyvernov1.ObjectFieldBinding(i)
 		vo.IgnoreFields = append(vo.IgnoreFields, converted)
 	}
 
@@ -174,7 +172,7 @@ func (h validateManifestHandler) checkDryRunPermission(ctx context.Context, kind
 	return h.client.CanI(ctx, kind, namespace, "create", "", config.KyvernoServiceAccountName())
 }
 
-func verifyManifestAttestorSet(resource unstructured.Unstructured, attestorSet kyvernov1.AttestorSet, vo *k8smanifest.VerifyResourceOption, path string, uid string, logger logr.Logger) (bool, string, error) {
+func verifyManifestAttestorSet(resource unstructured.Unstructured, attestorSet kyvernov1.AttestorSet, vo *kyvernov1.VerifyResourceOption, path string, uid string, logger logr.Logger) (bool, string, error) {
 	verifiedCount := 0
 	attestorSet = internal.ExpandStaticKeys(attestorSet)
 	requiredCount := attestorSet.RequiredCount()
@@ -233,7 +231,7 @@ func verifyManifestAttestorSet(resource unstructured.Unstructured, attestorSet k
 	return false, reason, nil
 }
 
-func k8sVerifyResource(resource unstructured.Unstructured, a kyvernov1.Attestor, vo *k8smanifest.VerifyResourceOption, attestorPath, uid string, i int, logger logr.Logger) (bool, string, error) {
+func k8sVerifyResource(resource unstructured.Unstructured, a kyvernov1.Attestor, vo *kyvernov1.VerifyResourceOption, attestorPath, uid string, i int, logger logr.Logger) (bool, string, error) {
 	// check annotations
 	if a.Annotations != nil {
 		mnfstAnnotations := resource.GetAnnotations()
@@ -255,7 +253,7 @@ func k8sVerifyResource(resource unstructured.Unstructured, a kyvernov1.Attestor,
 	logger.V(4).Info("verifying resource by k8s-manifest-sigstore")
 	result, err := k8smanifest.VerifyResource(resource, vo)
 	if err != nil {
-		logger.V(4).Info("verifyResoource return err", err.Error())
+		logger.V(4).Info("verifyResource return err", err.Error())
 		if k8smanifest.IsSignatureNotFoundError(err) {
 			// no signature found
 			failReason := fmt.Sprintf("%s: %s", attestorPath+subPath, err.Error())
@@ -286,7 +284,7 @@ func k8sVerifyResource(resource unstructured.Unstructured, a kyvernov1.Attestor,
 	}
 }
 
-func buildVerifyResourceOptionsAndPath(a kyvernov1.Attestor, vo *k8smanifest.VerifyResourceOption, uid string, i int) (*k8smanifest.VerifyResourceOption, string, []string, error) {
+func buildVerifyResourceOptionsAndPath(a kyvernov1.Attestor, vo *kyvernov1.VerifyResourceOption, uid string, i int) (*kyvernov1.VerifyResourceOption, string, []string, error) {
 	subPath := ""
 	var entryError error
 	envVariables := []string{}
@@ -363,7 +361,7 @@ func buildVerifyResourceOptionsAndPath(a kyvernov1.Attestor, vo *k8smanifest.Ver
 		Issuer := a.Keyless.Issuer
 		vo.OIDCIssuer = Issuer
 		Subject := a.Keyless.Subject
-		vo.Signers = k8smanifest.SignerList{Subject}
+		vo.Signers = kyvernov1.SignerList{Subject}
 	}
 	if a.Repository != "" {
 		vo.ResourceBundleRef = a.Repository
@@ -377,18 +375,18 @@ func cleanEnvVariables(envVariables []string) {
 	}
 }
 
-func addConfig(vo, defaultConfig *k8smanifest.VerifyResourceOption) *k8smanifest.VerifyResourceOption {
+func addConfig(vo, defaultConfig *kyvernov1.VerifyResourceOption) *kyvernov1.VerifyResourceOption {
 	if vo == nil {
 		return nil
 	}
-	ignoreFields := []k8smanifest.ObjectFieldBinding(vo.IgnoreFields)
-	ignoreFields = append(ignoreFields, []k8smanifest.ObjectFieldBinding(defaultConfig.IgnoreFields)...)
+	ignoreFields := []kyvernov1.ObjectFieldBinding(vo.IgnoreFields)
+	ignoreFields = append(ignoreFields, []kyvernov1.ObjectFieldBinding(defaultConfig.IgnoreFields)...)
 	vo.IgnoreFields = ignoreFields
 	return vo
 }
 
-func loadDefaultConfig() *k8smanifest.VerifyResourceOption {
-	var defaultConfig *k8smanifest.VerifyResourceOption
+func loadDefaultConfig() *kyvernov1.VerifyResourceOption {
+	var defaultConfig *kyvernov1.VerifyResourceOption
 	err := yaml.Unmarshal(engineresources.DefaultConfigBytes, &defaultConfig)
 	if err != nil {
 		return nil
@@ -396,7 +394,7 @@ func loadDefaultConfig() *k8smanifest.VerifyResourceOption {
 	return defaultConfig
 }
 
-func addDefaultConfig(vo *k8smanifest.VerifyResourceOption) *k8smanifest.VerifyResourceOption {
+func addDefaultConfig(vo *kyvernov1.VerifyResourceOption) *kyvernov1.VerifyResourceOption {
 	dvo := loadDefaultConfig()
 	return addConfig(vo, dvo)
 }
