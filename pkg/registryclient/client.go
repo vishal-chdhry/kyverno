@@ -63,6 +63,9 @@ type Client interface {
 	// BuildRemoteOption builds remote.Option based on client.
 	BuildRemoteOption(context.Context) remote.Option
 
+	// BuildGCRRemoteOption builds remote.Option based on client.
+	BuildGCRRemoteOption(context.Context) ([]gcrremote.Option, error)
+
 	// RefreshKeychainPullSecrets loads fresh data from pull secrets (if non-empty) and updates Keychain.
 	RefreshKeychainPullSecrets(ctx context.Context) error
 }
@@ -189,6 +192,27 @@ func (c *client) BuildRemoteOption(ctx context.Context) remote.Option {
 		gcrremote.WithTransport(c.transport),
 		gcrremote.WithContext(ctx),
 	)
+}
+
+// BuildRemoteOption builds remote.Option based on client.
+func (c *client) BuildGCRRemoteOption(ctx context.Context) ([]gcrremote.Option, error) {
+	remoteOpts := []gcrremote.Option{
+		gcrremote.WithAuthFromKeychain(c.keychain),
+		gcrremote.WithTransport(c.transport),
+		gcrremote.WithContext(ctx),
+	}
+	pusher, err := gcrremote.NewPusher(remoteOpts...)
+	if err != nil {
+		return nil, err
+	}
+	remoteOpts = append(remoteOpts, gcrremote.Reuse(pusher))
+
+	puller, err := gcrremote.NewPuller(remoteOpts...)
+	if err != nil {
+		return nil, err
+	}
+	remoteOpts = append(remoteOpts, gcrremote.Reuse(puller))
+	return remoteOpts, nil
 }
 
 // FetchImageDescriptor fetches Descriptor from registry with given imageRef
