@@ -58,11 +58,16 @@ type KeychainClient interface {
 }
 
 type CosignClient interface {
-	BuildRemoteOption(context.Context) remote.Option
+	BuildRemoteOption(context.Context) (remote.Option, error)
+}
+
+type GCRClient interface {
+	BuildGCRRemoteOption(context.Context) ([]gcrremote.Option, error)
 }
 
 type RegistryClient interface {
 	ImageDataClient
 	KeychainClient
 	CosignClient
+	GCRClient
 }

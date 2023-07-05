@@ -61,7 +61,7 @@ type Client interface {
 	FetchImageDescriptor(context.Context, string) (*gcrremote.Descriptor, error)
 
 	// BuildRemoteOption builds remote.Option based on client.
-	BuildRemoteOption(context.Context) remote.Option
+	BuildRemoteOption(context.Context) (remote.Option, error)
 
 	// BuildGCRRemoteOption builds remote.Option based on client.
 	BuildGCRRemoteOption(context.Context) ([]gcrremote.Option, error)
@@ -186,16 +186,21 @@ func WithTracing() Option {
 }
 
 // BuildRemoteOption builds remote.Option based on client.
-func (c *client) BuildRemoteOption(ctx context.Context) remote.Option {
+func (c *client) BuildRemoteOption(ctx context.Context) (remote.Option, error) {
+	remoteOpts, err := c.BuildGCRRemoteOption(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return remote.WithRemoteOptions(
-		gcrremote.WithAuthFromKeychain(c.keychain),
-		gcrremote.WithTransport(c.transport),
-		gcrremote.WithContext(ctx),
-	)
+		remoteOpts...,
+	), nil
 }
 
 // BuildRemoteOption builds remote.Option based on client.
 func (c *client) BuildGCRRemoteOption(ctx context.Context) ([]gcrremote.Option, error) {
+	if err := c.RefreshKeychainPullSecrets(ctx); err != nil {
+		return nil, fmt.Errorf("failed to refresh image pull secrets, error: %v", err)
+	}
 	remoteOpts := []gcrremote.Option{
 		gcrremote.WithAuthFromKeychain(c.keychain),
 		gcrremote.WithTransport(c.transport),
