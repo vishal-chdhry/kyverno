@@ -54,10 +54,12 @@ type ImageDataClient interface {
 
 type KeychainClient interface {
 	Keychain() authn.Keychain
+	RefreshKeychainPullSecrets(ctx context.Context) error
 }
 
 type CosignClient interface {
-	BuildRemoteOption(context.Context) remote.Option
+	BuildRemoteOption(context.Context) (remote.Option, error)
+	BuildGCRRemoteOption(context.Context) ([]gcrremote.Option, error)
 }
 
 type RegistryClient interface {
