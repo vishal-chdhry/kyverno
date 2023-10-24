@@ -58,7 +58,7 @@ func GetImageInfo(image string, cfg config.Configuration) (*ImageInfo, error) {
 		return nil, fmt.Errorf("bad image: %s, defaultRegistry: %s, enableDefaultRegistryMutation: %t: %w", fullImageName, config.Configuration.GetDefaultRegistry(cfg), config.Configuration.GetEnableDefaultRegistryMutation(cfg), err)
 	}
 
-	var registry, path, name, tag, digest, reference, referenceWithTag string
+	var registry, path, name, tag, digest string
 	if named, ok := ref.(reference.Named); ok {
 		registry = reference.Domain(named)
 		path = reference.Path(named)
@@ -79,22 +79,18 @@ func GetImageInfo(image string, cfg config.Configuration) (*ImageInfo, error) {
 	if fullImageName != image && !config.Configuration.GetEnableDefaultRegistryMutation(cfg) {
 		registry = ""
 	}
-	refWithTag = ReferenceWithTag(image, cfg)
-	referenceWithTag, err := reference.Parse(referenceWithTag)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to reference image with tag. Image: %s, defaultRegistry: %s, enableDefaultRegistryMutation: %t, Error: %w", fullImageName, config.Configuration.GetDefaultRegistry(cfg), config.Configuration.GetEnableDefaultRegistryMutation(cfg), err)
-	}
-	reference = fullImageName
 
-	return &ImageInfo{
-		Registry: registry,
-		Name:     name,
-		Path:     path,
-		Tag:      tag,
-		Digest:   digest,
-		Reference: reference,
-		ReferenceWithTag: referenceWithTag,
-	}, nil
+	imageInfo := &ImageInfo{
+	        Registry: registry,
+	        Name: name,
+	        Path: path,
+	        Tag: tag,
+	        Digest: digest,
+	}
+	
+	imageInfo.Reference = String(imageInfo)
+	imageInfo.ReferenceWithTag = ReferenceWithTag(imageInfo)
+	return imageInfo, nil
 }
 
 // addDefaultRegistry always adds default registry
