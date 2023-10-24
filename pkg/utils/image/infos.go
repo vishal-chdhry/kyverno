@@ -58,7 +58,7 @@ func GetImageInfo(image string, cfg config.Configuration) (*ImageInfo, error) {
 		return nil, fmt.Errorf("bad image: %s, defaultRegistry: %s, enableDefaultRegistryMutation: %t: %w", fullImageName, config.Configuration.GetDefaultRegistry(cfg), config.Configuration.GetEnableDefaultRegistryMutation(cfg), err)
 	}
 
-	var registry, path, name, tag, digest string
+	var registry, path, name, tag, digest, reference, referenceWithTag string
 	if named, ok := ref.(reference.Named); ok {
 		registry = reference.Domain(named)
 		path = reference.Path(named)
