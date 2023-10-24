@@ -3,7 +3,6 @@ package image
 import (
 	"fmt"
 	"strings"
-
 	"github.com/distribution/distribution/reference"
 	"github.com/kyverno/kyverno/pkg/config"
 )
@@ -23,6 +22,10 @@ type ImageInfo struct {
 
 	// Digest is the image digest portion e.g. `sha256:128c6e3534b842a2eec139999b8ce8aa9a2af9907e2b9269550809d18cd832a3`
 	Digest string `json:"digest,omitempty"`
+		
+	Reference string `json:"reference,omitempty"`
+
+	ReferenceWithTag string `json:"referenceWithTag,omitempty"`
 }
 
 func (i *ImageInfo) String() string {
@@ -83,6 +86,8 @@ func GetImageInfo(image string, cfg config.Configuration) (*ImageInfo, error) {
 		Path:     path,
 		Tag:      tag,
 		Digest:   digest,
+		ReferenceWithTag: referenceWithTag,
+		Reference: reference,
 	}, nil
 }
 
