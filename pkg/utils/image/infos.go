@@ -23,7 +23,7 @@ type ImageInfo struct {
 	// Digest is the image digest portion e.g. `sha256:128c6e3534b842a2eec139999b8ce8aa9a2af9907e2b9269550809d18cd832a3`
 	Digest string `json:"digest,omitempty"`
 		
-	// Reference string `json:"reference,omitempty"`
+	Reference string `json:"reference,omitempty"`
 
 	ReferenceWithTag string `json:"referenceWithTag,omitempty"`
 }
@@ -58,7 +58,7 @@ func GetImageInfo(image string, cfg config.Configuration) (*ImageInfo, error) {
 		return nil, fmt.Errorf("bad image: %s, defaultRegistry: %s, enableDefaultRegistryMutation: %t: %w", fullImageName, config.Configuration.GetDefaultRegistry(cfg), config.Configuration.GetEnableDefaultRegistryMutation(cfg), err)
 	}
 
-	var registry, path, name, tag, digest, referenceWithTag string
+	var registry, path, name, tag, digest, reference, referenceWithTag string
 	if named, ok := ref.(reference.Named); ok {
 		registry = reference.Domain(named)
 		path = reference.Path(named)
@@ -79,11 +79,12 @@ func GetImageInfo(image string, cfg config.Configuration) (*ImageInfo, error) {
 	if fullImageName != image && !config.Configuration.GetEnableDefaultRegistryMutation(cfg) {
 		registry = ""
 	}
-	referenceWithTag = ReferenceWithTag(image, cfg)
-	refWithTag, err := reference.Parse(referenceWithTag)
+	refWithTag = ReferenceWithTag(image, cfg)
+	referenceWithTag, err := reference.Parse(referenceWithTag)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to reference image with tag. Image: %s, defaultRegistry: %s, enableDefaultRegistryMutation: %t, Error: %w", fullImageName, config.Configuration.GetDefaultRegistry(cfg), config.Configuration.GetEnableDefaultRegistryMutation(cfg), err)
 	}
+	reference = fullImageName
 
 	return &ImageInfo{
 		Registry: registry,
@@ -91,7 +92,7 @@ func GetImageInfo(image string, cfg config.Configuration) (*ImageInfo, error) {
 		Path:     path,
 		Tag:      tag,
 		Digest:   digest,
-		// Reference: reference,
+		Reference: reference,
 		ReferenceWithTag: referenceWithTag,
 	}, nil
 }
