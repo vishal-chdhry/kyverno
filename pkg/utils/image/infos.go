@@ -22,9 +22,11 @@ type ImageInfo struct {
 
 	// Digest is the image digest portion e.g. `sha256:128c6e3534b842a2eec139999b8ce8aa9a2af9907e2b9269550809d18cd832a3`
 	Digest string `json:"digest,omitempty"`
-		
+
+	// Reference is an optional readable reference for the image e.g. `docker.io/nginx`
 	Reference string `json:"reference,omitempty"`
 
+	// ReferenceWithTag is an optional readable reference for the image along with the image tag e.g. `docker.io/nginx:v10`
 	ReferenceWithTag string `json:"referenceWithTag,omitempty"`
 }
 
