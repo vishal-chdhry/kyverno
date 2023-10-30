@@ -88,8 +88,8 @@ func GetImageInfo(image string, cfg config.Configuration) (*ImageInfo, error) {
 	        Digest: digest,
 	}
 	
-	imageInfo.Reference = String(imageInfo)
-	imageInfo.ReferenceWithTag = ReferenceWithTag(imageInfo)
+	imageInfo.Reference = imageInfo.String()
+	imageInfo.ReferenceWithTag = imageInfo.ReferenceWithTag()
 	return imageInfo, nil
 }
 
