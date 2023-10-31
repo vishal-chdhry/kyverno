@@ -148,8 +148,8 @@ func Test_ReferenceWithTag(t *testing.T) {
 
 func Test_ReferenceAndReferenceWithTag(t *testing.T) {
 	testCases := []struct {
-		input    				 string
-		expectedReference  		 string
+		input    		 string
+		expectedReference	 string
 		expectedReferenceWithTag string
 	}{{
 		input:    "nginx",
