@@ -219,7 +219,7 @@ func TestImageVerificationMetadata_Merge(t *testing.T) {
 		Data map[string]bool
 	}
 	type args struct {
-		other ImageVerificationMetadata
+		other *ImageVerificationMetadata
 	}
 	tests := []struct {
 		name   string
@@ -235,7 +235,7 @@ func TestImageVerificationMetadata_Merge(t *testing.T) {
 			},
 		},
 		args: args{
-			other: ImageVerificationMetadata{
+			other: &ImageVerificationMetadata{
 				Data: map[string]bool{
 					"test": false,
 				},
@@ -253,7 +253,7 @@ func TestImageVerificationMetadata_Merge(t *testing.T) {
 			},
 		},
 		args: args{
-			other: ImageVerificationMetadata{
+			other: &ImageVerificationMetadata{
 				Data: map[string]bool{
 					"test2": false,
 				},

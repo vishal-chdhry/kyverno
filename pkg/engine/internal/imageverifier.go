@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"runtime"
 	"strings"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	apiutils "github.com/kyverno/kyverno/pkg/utils/api"
 	"github.com/kyverno/kyverno/pkg/utils/jsonpointer"
 	"go.uber.org/multierr"
+	"golang.org/x/sync/errgroup"
 	"gomodules.xyz/jsonpatch/v2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -214,93 +216,103 @@ func (iv *ImageVerifier) Verify(
 	matchedImageInfos []apiutils.ImageInfo,
 	cfg config.Configuration,
 ) ([]jsonpatch.JsonPatchOperation, []*engineapi.RuleResponse) {
-	var responses []*engineapi.RuleResponse
+	responses := engineapi.NewRuleResponseList()
 	var patches []jsonpatch.JsonPatchOperation
 
 	// for backward compatibility
 	imageVerify = *imageVerify.Convert()
 
+	var g errgroup.Group
+	g.SetLimit(runtime.NumCPU())
+
 	for _, imageInfo := range matchedImageInfos {
 		image := imageInfo.String()
-
-		if HasImageVerifiedAnnotationChanged(iv.policyContext, iv.logger) {
-			msg := kyverno.AnnotationImageVerify + " annotation cannot be changed"
-			iv.logger.Info("image verification error", "reason", msg)
-			responses = append(responses, engineapi.RuleFail(iv.rule.Name, engineapi.ImageVerify, msg))
-			continue
-		}
-
-		pointer := jsonpointer.ParsePath(imageInfo.Pointer).JMESPath()
-		changed, err := iv.policyContext.JSONContext().HasChanged(pointer)
-		if err == nil && !changed {
-			iv.logger.V(4).Info("no change in image, skipping check", "image", image)
-			iv.ivm.Add(image, true)
-			continue
-		}
-
-		verified, err := isImageVerified(iv.policyContext.NewResource(), image, iv.logger)
-		if err == nil && verified {
-			iv.logger.Info("image was previously verified, skipping check", "image", image)
-			iv.ivm.Add(image, true)
-			continue
-		}
-		start := time.Now()
-		isInCache := false
-		if iv.ivCache != nil {
-			found, err := iv.ivCache.Get(ctx, iv.policyContext.Policy(), iv.rule.Name, image)
-			if err != nil {
-				iv.logger.Error(err, "error occurred during cache get")
-			} else {
-				isInCache = found
+		imageInfo := imageInfo
+		g.Go(func() error {
+			if HasImageVerifiedAnnotationChanged(iv.policyContext, iv.logger) {
+				msg := kyverno.AnnotationImageVerify + " annotation cannot be changed"
+				iv.logger.Info("image verification error", "reason", msg)
+				responses.Add(engineapi.RuleFail(iv.rule.Name, engineapi.ImageVerify, msg))
+				return nil
 			}
-		}
 
-		var ruleResp *engineapi.RuleResponse
-		var digest string
-		if isInCache {
-			iv.logger.V(2).Info("cache entry found", "namespace", iv.policyContext.Policy().GetNamespace(), "policy", iv.policyContext.Policy().GetName(), "ruleName", iv.rule.Name, "imageRef", image)
-			ruleResp = engineapi.RulePass(iv.rule.Name, engineapi.ImageVerify, "verified from cache")
-			digest = imageInfo.Digest
-		} else {
-			iv.logger.V(2).Info("cache entry not found", "namespace", iv.policyContext.Policy().GetNamespace(), "policy", iv.policyContext.Policy().GetName(), "ruleName", iv.rule.Name, "imageRef", image)
-			ruleResp, digest = iv.verifyImage(ctx, imageVerify, imageInfo, cfg)
-			if ruleResp != nil && ruleResp.Status() == engineapi.RuleStatusPass {
-				if iv.ivCache != nil {
-					setted, err := iv.ivCache.Set(ctx, iv.policyContext.Policy(), iv.rule.Name, image)
-					if err != nil {
-						iv.logger.Error(err, "error occurred during cache set")
-					} else {
-						if setted {
-							iv.logger.V(4).Info("successfully set cache", "namespace", iv.policyContext.Policy().GetNamespace(), "policy", iv.policyContext.Policy().GetName(), "ruleName", iv.rule.Name, "imageRef", image)
+			pointer := jsonpointer.ParsePath(imageInfo.Pointer).JMESPath()
+			changed, err := iv.policyContext.JSONContext().HasChanged(pointer)
+			if err == nil && !changed {
+				iv.logger.V(4).Info("no change in image, skipping check", "image", image)
+				iv.ivm.Add(image, true)
+				return nil
+			}
+
+			verified, err := isImageVerified(iv.policyContext.NewResource(), image, iv.logger)
+			if err == nil && verified {
+				iv.logger.Info("image was previously verified, skipping check", "image", image)
+				iv.ivm.Add(image, true)
+				return nil
+			}
+			start := time.Now()
+			isInCache := false
+			if iv.ivCache != nil {
+				found, err := iv.ivCache.Get(ctx, iv.policyContext.Policy(), iv.rule.Name, image)
+				if err != nil {
+					iv.logger.Error(err, "error occurred during cache get")
+				} else {
+					isInCache = found
+				}
+			}
+
+			var ruleResp *engineapi.RuleResponse
+			var digest string
+			if isInCache {
+				iv.logger.V(2).Info("cache entry found", "namespace", iv.policyContext.Policy().GetNamespace(), "policy", iv.policyContext.Policy().GetName(), "ruleName", iv.rule.Name, "imageRef", image)
+				ruleResp = engineapi.RulePass(iv.rule.Name, engineapi.ImageVerify, "verified from cache")
+				digest = imageInfo.Digest
+			} else {
+				iv.logger.V(2).Info("cache entry not found", "namespace", iv.policyContext.Policy().GetNamespace(), "policy", iv.policyContext.Policy().GetName(), "ruleName", iv.rule.Name, "imageRef", image)
+				ruleResp, digest = iv.verifyImage(ctx, imageVerify, imageInfo, cfg)
+				if ruleResp != nil && ruleResp.Status() == engineapi.RuleStatusPass {
+					if iv.ivCache != nil {
+						setted, err := iv.ivCache.Set(ctx, iv.policyContext.Policy(), iv.rule.Name, image)
+						if err != nil {
+							iv.logger.Error(err, "error occurred during cache set")
+						} else {
+							if setted {
+								iv.logger.V(4).Info("successfully set cache", "namespace", iv.policyContext.Policy().GetNamespace(), "policy", iv.policyContext.Policy().GetName(), "ruleName", iv.rule.Name, "imageRef", image)
+							}
 						}
 					}
 				}
 			}
-		}
-		iv.logger.V(4).Info("time taken by the image verify operation", "duration", time.Since(start))
+			iv.logger.V(4).Info("time taken by the image verify operation", "duration", time.Since(start))
 
-		if imageVerify.MutateDigest {
-			patch, retrievedDigest, err := iv.handleMutateDigest(ctx, digest, imageInfo)
-			if err != nil {
-				responses = append(responses, engineapi.RuleError(iv.rule.Name, engineapi.ImageVerify, "failed to update digest", err))
-			} else if patch != nil {
-				if ruleResp == nil {
-					ruleResp = engineapi.RulePass(iv.rule.Name, engineapi.ImageVerify, "mutated image digest")
+			if imageVerify.MutateDigest {
+				patch, retrievedDigest, err := iv.handleMutateDigest(ctx, digest, imageInfo)
+				if err != nil {
+					responses.Add(engineapi.RuleError(iv.rule.Name, engineapi.ImageVerify, "failed to update digest", err))
+				} else if patch != nil {
+					if ruleResp == nil {
+						ruleResp = engineapi.RulePass(iv.rule.Name, engineapi.ImageVerify, "mutated image digest")
+					}
+					patches = append(patches, *patch)
+					imageInfo.Digest = retrievedDigest
+					image = imageInfo.String()
 				}
-				patches = append(patches, *patch)
-				imageInfo.Digest = retrievedDigest
-				image = imageInfo.String()
 			}
-		}
 
-		if ruleResp != nil {
-			if len(imageVerify.Attestors) > 0 || len(imageVerify.Attestations) > 0 {
-				iv.ivm.Add(image, ruleResp.Status() == engineapi.RuleStatusPass)
+			if ruleResp != nil {
+				if len(imageVerify.Attestors) > 0 || len(imageVerify.Attestations) > 0 {
+					iv.ivm.Add(image, ruleResp.Status() == engineapi.RuleStatusPass)
+				}
+				responses.Add(ruleResp)
 			}
-			responses = append(responses, ruleResp)
-		}
+			return nil
+		})
 	}
-	return patches, responses
+
+	if err := g.Wait(); err != nil {
+		return nil, nil
+	}
+	return patches, responses.GetAll()
 }
 
 func (iv *ImageVerifier) verifyImage(
