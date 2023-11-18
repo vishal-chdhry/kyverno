@@ -3,7 +3,7 @@ package image
 import (
 	"fmt"
 	"strings"
-	
+
 	"github.com/distribution/reference"
 	"github.com/kyverno/kyverno/pkg/config"
 )
