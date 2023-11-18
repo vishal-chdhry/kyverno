@@ -3,6 +3,7 @@ package image
 import (
 	"fmt"
 	"strings"
+	
 	"github.com/distribution/reference"
 	"github.com/kyverno/kyverno/pkg/config"
 )
@@ -83,13 +84,13 @@ func GetImageInfo(image string, cfg config.Configuration) (*ImageInfo, error) {
 	}
 
 	imageInfo := &ImageInfo{
-	        Registry: registry,
-	        Name: name,
-	        Path: path,
-	        Tag: tag,
-	        Digest: digest,
+		Registry: registry,
+		Name:     name,
+		Path:     path,
+		Tag:      tag,
+		Digest:   digest,
 	}
-	
+
 	imageInfo.Reference = imageInfo.String()
 	imageInfo.ReferenceWithTagString = imageInfo.ReferenceWithTag()
 	return imageInfo, nil
