@@ -28,7 +28,7 @@ type ImageInfo struct {
 	Reference string `json:"reference,omitempty"`
 
 	// ReferenceWithTag is an optional readable reference for the image along with the image tag e.g. `docker.io/nginx:v10`
-	ReferenceWithTagString string `json:"referenceWithTag,omitempty"`
+	ReferenceWithTag string `json:"referenceWithTag,omitempty"`
 }
 
 func (i *ImageInfo) String() string {
@@ -45,7 +45,7 @@ func (i *ImageInfo) String() string {
 	}
 }
 
-func (i *ImageInfo) ReferenceWithTag() string {
+func (i *ImageInfo) GetReferenceWithTag() string {
 	if i.Registry != "" {
 		return fmt.Sprintf("%s/%s:%s", i.Registry, i.Path, i.Tag)
 	} else {
@@ -92,7 +92,7 @@ func GetImageInfo(image string, cfg config.Configuration) (*ImageInfo, error) {
 	}
 
 	imageInfo.Reference = imageInfo.String()
-	imageInfo.ReferenceWithTagString = imageInfo.ReferenceWithTag()
+	imageInfo.ReferenceWithTag = imageInfo.GetReferenceWithTag()
 	return imageInfo, nil
 }
 
