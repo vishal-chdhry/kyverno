@@ -300,7 +300,6 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/oleiade/reflections v1.0.1 // indirect
 	github.com/oliveagle/jsonpath v0.0.0-20180606110733-2e52cf6e6852 // indirect
-	github.com/open-policy-agent/gatekeeper v0.0.0-20210824170141-dd97b8a7e966 // indirect
 	github.com/open-policy-agent/opa v0.58.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/outcaste-io/ristretto v0.2.3 // indirect
@@ -409,5 +408,6 @@ require (
 
 replace (
 	github.com/sigstore/cosign/v2 => github.com/kyverno/cosign/v2 v2.0.0-20231109090756-51fd41540436
+	github.com/sigstore/k8s-manifest-sigstore => github.com/vishal-chdhry/k8s-manifest-sigstore v0.0.0-20231218151954-feeed272af5c
 	sigs.k8s.io/kubectl-validate => github.com/kyverno/kubectl-validate v0.0.0-20231116142848-59e4e6124b70
 )
