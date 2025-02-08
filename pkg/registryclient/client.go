@@ -180,22 +180,10 @@ func WithTracing() Option {
 func (c *client) Options(ctx context.Context) ([]gcrremote.Option, error) {
 	opts := []gcrremote.Option{
 		gcrremote.WithAuthFromKeychain(c.keychain),
-		gcrremote.WithTransport(c.transport),
+		gcrremote.WithTransport(gcrremote.DefaultTransport),
 		gcrremote.WithContext(ctx),
 		gcrremote.WithUserAgent(userAgent),
 	}
-
-	pusher, err := gcrremote.NewPusher(opts...)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, gcrremote.Reuse(pusher))
-
-	puller, err := gcrremote.NewPuller(opts...)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, gcrremote.Reuse(puller))
 
 	return opts, nil
 }
